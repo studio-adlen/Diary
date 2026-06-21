@@ -1,0 +1,822 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>For Her — A Diary</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Caveat:wght@400;500;600;700&family=Homemade+Apple&family=Cormorant+Garamond:ital,wght@0,400;0,500;0,600;1,400&family=Cormorant+SC:wght@500&display=swap" rel="stylesheet">
+<style>
+
+/* ============================================================
+   ENTRY DATA
+   ------------------------------------------------------------
+   To add a new diary entry, add a new object to the ENTRIES
+   array near the top of the <script> block at the bottom of
+   this file. Format:
+
+   { date: "2026-06-21", content: "Today I..." }
+
+   Newest entries are shown first automatically. You don't need
+   to touch anything else.
+   ============================================================ */
+
+:root{
+  --cover-leather: #4a2417;
+  --cover-leather-dark: #2e150d;
+  --cover-leather-light: #6b3622;
+  --gold: #b8924a;
+  --gold-bright: #d8b876;
+  --paper: #f4ecd8;
+  --paper-shadow: #e3d5b3;
+  --paper-edge: #d8c9a3;
+  --ink: #2b2a28;
+  --ink-soft: #4a4540;
+  --desk: #1b140f;
+  --desk-light: #2a1f17;
+}
+
+*{box-sizing:border-box;}
+html,body{
+  margin:0; padding:0; width:100%; height:100%;
+  overflow:hidden;
+  background: radial-gradient(ellipse at 50% 30%, var(--desk-light) 0%, var(--desk) 65%, #0e0a07 100%);
+  font-family: 'Cormorant Garamond', serif;
+  -webkit-tap-highlight-color: transparent;
+}
+
+#stage{
+  position:relative;
+  width:100%; height:100%;
+  display:flex; align-items:center; justify-content:center;
+  perspective: 2600px;
+}
+
+/* faint desk vignette texture */
+#stage::before{
+  content:"";
+  position:absolute; inset:0;
+  background-image:
+    radial-gradient(ellipse at 20% 80%, rgba(184,146,74,0.04) 0%, transparent 45%),
+    radial-gradient(ellipse at 80% 15%, rgba(184,146,74,0.05) 0%, transparent 40%);
+  pointer-events:none;
+}
+
+/* ---------- intro / opening cover ---------- */
+#bookWrap{
+  position:relative;
+  transform-style: preserve-3d;
+  transition: transform 1.1s cubic-bezier(.65,0,.35,1);
+}
+
+#cover{
+  position:absolute;
+  top:0; left:0;
+  width: var(--page-w); height: var(--page-h);
+  border-radius: 4px 10px 10px 4px;
+  background:
+    linear-gradient(120deg, rgba(255,255,255,0.07) 0%, transparent 18%),
+    linear-gradient(100deg, var(--cover-leather-light) 0%, var(--cover-leather) 35%, var(--cover-leather-dark) 100%);
+  box-shadow:
+    0 30px 70px rgba(0,0,0,0.65),
+    0 8px 18px rgba(0,0,0,0.5),
+    inset 0 0 50px rgba(0,0,0,0.45),
+    inset 0 0 2px rgba(255,255,255,0.08);
+  cursor:pointer;
+  z-index: 50;
+  transform-origin: left center;
+  transform-style: preserve-3d;
+  transition: transform 1.15s cubic-bezier(.7,0,.3,1);
+  display:flex; align-items:center; justify-content:center;
+}
+#cover.open{
+  transform: rotateY(-168deg);
+  pointer-events:none;
+}
+#cover::after{ /* leather grain */
+  content:"";
+  position:absolute; inset:0; border-radius:inherit;
+  background-image: repeating-linear-gradient(115deg, rgba(0,0,0,0.05) 0px, transparent 1.5px, transparent 3px);
+  mix-blend-mode: overlay;
+  opacity:0.5;
+  pointer-events:none;
+}
+#cover::before{ /* spine shadow on the right edge near binding */
+  content:"";
+  position:absolute; top:0; bottom:0; left:0; width:28px;
+  background: linear-gradient(90deg, rgba(0,0,0,0.5), transparent);
+  border-radius: 4px 0 0 4px;
+}
+
+.cover-art{
+  text-align:center;
+  color: var(--gold);
+  transform: translateZ(2px);
+  width: 78%;
+}
+.cover-frame{
+  border: 1.5px solid rgba(184,146,74,0.55);
+  padding: 38px 22px;
+  position:relative;
+}
+.cover-frame::before, .cover-frame::after{
+  content:"";
+  position:absolute; width:13px; height:13px;
+  border: 1.5px solid rgba(184,146,74,0.7);
+}
+.cover-frame::before{ top:-7px; left:-7px; border-right:none; border-bottom:none; }
+.cover-frame::after{ bottom:-7px; right:-7px; border-left:none; border-top:none; }
+.cover-title{
+  font-family:'Cormorant SC', serif;
+  font-size: clamp(22px, 3vw, 30px);
+  letter-spacing: 4px;
+  margin: 0 0 6px;
+  color: var(--gold-bright);
+  text-shadow: 0 1px 2px rgba(0,0,0,0.4);
+}
+.cover-sub{
+  font-family:'Caveat', cursive;
+  font-size: clamp(17px, 2vw, 21px);
+  color: rgba(216,184,118,0.85);
+  margin:0;
+  letter-spacing: 0.5px;
+}
+.cover-mono{
+  margin-top: 22px;
+  font-size: 12px;
+  letter-spacing: 3px;
+  color: rgba(216,184,118,0.55);
+  font-family: 'Cormorant Garamond', serif;
+  text-transform: uppercase;
+}
+.cover-hint{
+  position:absolute;
+  bottom: -52px; left:0; right:0;
+  text-align:center;
+  font-family:'Caveat', cursive;
+  font-size: 19px;
+  color: rgba(216,184,118,0.65);
+  animation: pulseHint 2.4s ease-in-out infinite;
+}
+@keyframes pulseHint{
+  0%,100%{ opacity:0.55; transform:translateY(0); }
+  50%{ opacity:1; transform:translateY(3px); }
+}
+
+/* ---------- book base / pages ---------- */
+#book{
+  position:relative;
+  width: var(--book-w);
+  height: var(--page-h);
+  transform-style: preserve-3d;
+}
+
+.spine-shadow{
+  position:absolute;
+  top:0; bottom:0; left:50%;
+  width: 70px; margin-left:-35px;
+  background: linear-gradient(90deg, transparent, rgba(0,0,0,0.20) 50%, transparent);
+  pointer-events:none;
+  z-index: 30;
+}
+.single-mode .spine-shadow{ display:none; }
+
+.leaf{
+  position:absolute;
+  top:0;
+  width: var(--page-w); height: var(--page-h);
+  transform-style: preserve-3d;
+  transition: transform 0.85s cubic-bezier(.645,.045,.355,1);
+  z-index: 10;
+}
+.leaf.right{ left: 50%; transform-origin: left center; }
+.leaf.left-static{ left:0; }
+
+.single-mode .leaf{ left:0; width: var(--page-w); transform-origin: left center; }
+
+.face{
+  position:absolute; inset:0;
+  -webkit-backface-visibility:hidden; backface-visibility:hidden;
+  background: var(--paper);
+  border-radius: 2px 8px 8px 2px;
+  box-shadow:
+    inset 0 0 35px rgba(120,95,55,0.12),
+    inset -8px 0 18px -8px rgba(120,95,55,0.18);
+  overflow:hidden;
+}
+.face.back{ transform: rotateY(180deg); }
+
+/* paper texture */
+.face::before{
+  content:"";
+  position:absolute; inset:0;
+  background-image:
+    repeating-linear-gradient(0deg, rgba(120,95,55,0.025) 0px, transparent 1px, transparent 27px, rgba(120,95,55,0.025) 28px),
+    radial-gradient(circle at 15% 20%, rgba(160,130,80,0.05), transparent 35%),
+    radial-gradient(circle at 85% 75%, rgba(160,130,80,0.05), transparent 35%);
+  pointer-events:none;
+}
+.face::after{ /* fiber speckle */
+  content:"";
+  position:absolute; inset:0;
+  background-image:
+    radial-gradient(rgba(90,70,40,0.07) 0.6px, transparent 0.6px),
+    radial-gradient(rgba(90,70,40,0.05) 0.6px, transparent 0.6px);
+  background-size: 13px 13px, 9px 9px;
+  background-position: 0 0, 4px 6px;
+  pointer-events:none;
+}
+
+.page-content{
+  position:relative;
+  height:100%;
+  padding: 9% 9% 13%;
+  display:flex;
+  flex-direction:column;
+  z-index:2;
+}
+
+.page-date{
+  font-family:'Cormorant SC', serif;
+  color: var(--gold);
+  font-size: clamp(15px, 1.7vw, 19px);
+  letter-spacing: 1.5px;
+  border-bottom: 1px solid rgba(184,146,74,0.35);
+  padding-bottom: 12px;
+  margin-bottom: 18px;
+  display:flex;
+  justify-content:space-between;
+  align-items:baseline;
+}
+.page-date .dow{
+  font-family:'Caveat', cursive;
+  font-size: clamp(18px, 2vw, 22px);
+  color: var(--ink-soft);
+  letter-spacing: 0.5px;
+}
+
+.page-body{
+  flex:1;
+  overflow-y:auto;
+  font-family:'Homemade Apple', cursive;
+  color: var(--ink);
+  font-size: clamp(17px, 1.85vw, 21px);
+  line-height: 2.05;
+  white-space: pre-wrap;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(184,146,74,0.4) transparent;
+  padding-right: 4px;
+}
+.page-body::first-letter{
+  font-size: 1.7em;
+  font-family:'Cormorant SC', serif;
+  color: var(--gold);
+  padding-right:2px;
+}
+.page-body::-webkit-scrollbar{ width:4px; }
+.page-body::-webkit-scrollbar-thumb{ background: rgba(184,146,74,0.35); border-radius:4px; }
+
+.page-num{
+  position:absolute;
+  bottom: 5%;
+  left:0; right:0;
+  text-align:center;
+  font-family:'Cormorant Garamond', serif;
+  font-style:italic;
+  font-size: 13px;
+  letter-spacing: 2px;
+  color: var(--ink-soft);
+  opacity: 0.55;
+}
+
+.heart-dingbat{
+  text-align:center;
+  color: var(--gold);
+  opacity:0.5;
+  font-size:13px;
+  margin-top:10px;
+  letter-spacing: 6px;
+}
+
+/* empty / cover-of-blank page styling */
+.endpaper{
+  display:flex; align-items:center; justify-content:center;
+  height:100%;
+}
+.endpaper-inner{
+  text-align:center;
+  font-family:'Caveat', cursive;
+  color: var(--ink-soft);
+  font-size: 20px;
+  opacity:0.6;
+  padding: 0 14%;
+  line-height:1.6;
+}
+
+/* page curl shadow during drag/flip */
+.leaf .curl-shadow{
+  position:absolute; inset:0;
+  background: linear-gradient(100deg, rgba(0,0,0,0.25), transparent 35%);
+  opacity:0;
+  transition: opacity .85s ease;
+  pointer-events:none;
+  z-index:5;
+  border-radius:2px 8px 8px 2px;
+}
+.leaf.flipping .curl-shadow{ opacity:1; }
+
+.leaf.under{ z-index:5; }
+.leaf.over{ z-index:15; }
+
+/* drop shadow cast by the lifted page onto the book */
+.lift-shadow{
+  position:absolute; top:2%; bottom:2%;
+  width: 36%;
+  background: linear-gradient(90deg, rgba(0,0,0,0.30), transparent);
+  filter: blur(10px);
+  opacity:0;
+  transition: opacity .5s ease;
+  pointer-events:none;
+  z-index:8;
+}
+
+/* ---------- controls ---------- */
+#controls{
+  position:fixed;
+  bottom: 26px; left:0; right:0;
+  display:flex; align-items:center; justify-content:center;
+  gap: 28px;
+  z-index: 60;
+  opacity:0;
+  transition: opacity .8s ease .3s;
+  pointer-events:none;
+}
+#controls.show{ opacity:1; pointer-events:auto; }
+
+.nav-btn{
+  width:46px; height:46px;
+  border-radius:50%;
+  border:1px solid rgba(184,146,74,0.4);
+  background: rgba(46,21,13,0.55);
+  backdrop-filter: blur(6px);
+  color: var(--gold-bright);
+  display:flex; align-items:center; justify-content:center;
+  cursor:pointer;
+  transition: transform .2s ease, background .2s ease, opacity .2s ease;
+  font-size: 18px;
+}
+.nav-btn:hover:not(:disabled){ background: rgba(184,146,74,0.18); transform: translateY(-2px); }
+.nav-btn:active:not(:disabled){ transform: translateY(0) scale(0.94); }
+.nav-btn:disabled{ opacity:0.25; cursor:default; }
+
+.nav-info{
+  font-family:'Cormorant Garamond', serif;
+  color: rgba(232,216,180,0.75);
+  font-size:14px;
+  letter-spacing:1.5px;
+  min-width: 130px;
+  text-align:center;
+  font-variant-numeric: tabular-nums;
+}
+
+/* ---------- top label ---------- */
+#topLabel{
+  position:fixed;
+  top: 22px; left:0; right:0;
+  text-align:center;
+  z-index: 60;
+  opacity:0;
+  transition: opacity 1s ease .6s;
+  pointer-events:none;
+}
+#topLabel.show{ opacity:1; }
+#topLabel span{
+  font-family:'Caveat', cursive;
+  font-size: 18px;
+  color: rgba(216,184,118,0.55);
+  letter-spacing:1px;
+}
+
+/* close-book button on opened pages, small, top-left */
+#closeBtn{
+  position:fixed; top:22px; left:26px; z-index:60;
+  font-family:'Cormorant Garamond', serif;
+  font-size:13px; letter-spacing:1.5px;
+  color: rgba(216,184,118,0.55);
+  background:none; border:none; cursor:pointer;
+  opacity:0; transition: opacity .8s ease .6s, color .2s;
+  pointer-events:none;
+}
+#closeBtn.show{ opacity:1; pointer-events:auto; }
+#closeBtn:hover{ color: var(--gold-bright); }
+
+/* ambient candle glow */
+.glow{
+  position:fixed;
+  width: 900px; height:900px;
+  border-radius:50%;
+  background: radial-gradient(circle, rgba(184,146,74,0.07), transparent 70%);
+  top:50%; left:50%;
+  transform: translate(-50%,-50%);
+  pointer-events:none;
+  z-index:1;
+}
+
+@media (max-width: 880px){
+  .cover-frame{ padding: 30px 16px; }
+  #controls{ gap:20px; }
+}
+
+@media (prefers-reduced-motion: reduce){
+  *{ transition-duration: 0.01ms !important; animation-duration: 0.01ms !important; }
+}
+</style>
+</head>
+<body>
+
+<div class="glow"></div>
+<div id="topLabel"><span>A diary, written for you</span></div>
+<button id="closeBtn">‹ close the book</button>
+
+<div id="stage">
+  <div id="bookWrap">
+    <div id="book">
+      <div class="spine-shadow"></div>
+      <div id="leavesRoot"></div>
+    </div>
+    <div id="cover">
+      <div class="cover-art">
+        <div class="cover-frame">
+          <p class="cover-title">For Her</p>
+          <p class="cover-sub">a quiet collection of thoughts</p>
+          <p class="cover-mono">Private &amp; Personal</p>
+        </div>
+      </div>
+      <div class="cover-hint">tap to open</div>
+    </div>
+  </div>
+</div>
+
+<div id="controls">
+  <button class="nav-btn" id="prevBtn" aria-label="Previous page">&#10094;</button>
+  <div class="nav-info" id="pageInfo">— — —</div>
+  <button class="nav-btn" id="nextBtn" aria-label="Next page">&#10095;</button>
+</div>
+
+<script>
+/* ============================================================
+   ENTRIES — edit this array to add diary entries.
+   date: "YYYY-MM-DD"
+   content: your writing, plain text. Blank lines = paragraph breaks.
+   Newest date always shows first automatically.
+   ============================================================ */
+const ENTRIES = [
+    {
+    date: "2026-06-14",
+    content: `Six hours of time difference and somehow we still found a way to have breakfast and dinner together — me with my coffee, you with your tea, both of us on a tiny screen pretending it's enough.
+
+It isn't enough. But it's ours, and I'll take it.
+
+I caught myself smiling at my phone today like an idiot. My coworker asked what was so funny. I just said "nothing," because how do you explain that it was just you, existing, on the other side of the world?`
+  },
+  {
+    date: "22/06/2026",
+    content: `innala rathri ni yenne vilichit paranju ninde aniyathi
+        ee book pokki yenn yenit ninak yendh cheyyende enn ariyilla yenn paranj karanj,
+        but njan ninne paranju aashvasippichu, njan rathri angotek book
+        vagan vara ennokke paranju but adathek poyit adun pidich thooki
+        ya pinne nina yenik kittula yen thoni agne ninne
+        yenik nashta pedutha avoda yenik ninna athrakkum ishta
+        ni illengil yende lifeil pinne vere penn illa ketta
+        njan ninna vit pokum yenn ni pedikand chathalum ninde
+        koode indavum taa I love youu
+        inn raville avumbam ni yinnod paranj
+        achan evidayo poyi yenn njan paranju ninna njan
+        meet cheyyan yen njan yennit vandi yeduth
+        ninna kanan vann ada yethiyappa njan ninde msg
+        nokki appo ninne kanana ulla hope yellam poyi ninde
+        achan vann yenn ann message, faa ayi njan ninna
+        pinna ithra dhooram vannath alle ninna kanand
+        povan pattilalla njan aa veedint athile koode
+        4 oottam vandi kond poyi adun kore al
+        nokkundayiru faa ayi 5 mathe ottathil ann
+        ninne kande kand kayijit ann book vayan ann vanne
+        yenna orma vanne, yenit njan Railway
+        Stationil poyi ninnu korach kayyumbam ninde
+        msg vaunnu achan poyi yennum paranj achan
+        olod povand yennum paranjit ni yenik vendi
+        risk yeduth railway stationil vannu ath kandappo ni
+        yenne vit povulla yenn orapp ayi ninak anegil
+        odukkatha pedi ni railway stationil gethiappo
+        alle yende penine njan adhy ayit ithra aduth kande
+        ninak online yennod nalle comfort ann but
+        nerit kandappo faa anne. ni yendhe yende mukath
+        nokkathe tension ano ninak njan kore samsarikkan
+        nokki but ninak nalle chammal ann :) yennit
+        korach photo yellam yeduth mami varunnathinu munne
+        yethande kond namma vegam poyi lift
+        agathinnum korach neram samsarikkka yenn
+        vicharichath ni keenj oodi ninna onnum cheyyan
+        alla faa ninnod korachode samsarikkan aad
+        alkar undayond ayirikkam ninak chammal
+        yenn karuth ath kond ann liftil nikkan paraje
+        ath faa ayi sarulla ninna njan comfort akkikola faaaaa`
+  },
+  
+  {
+    date: "2026-06-02",
+    content: `I booked the flight today. I haven't told you yet — I want to see your face when I do.
+
+Eighty-four days. I've counted them twice already.
+
+There's a particular kind of joy in keeping a good secret for someone you love. I am holding onto this one like it's made of glass.`
+  },
+  {
+    date: "2026-05-20",
+    content: `Rough day. Nothing went right, and the only thing that fixed it was your voice note at 11pm telling me about your day in that ridiculous, animated way you do.
+
+You don't know this, but you talk with your hands even on audio messages. I can hear it in your voice.
+
+I fell asleep with my phone still playing your message on loop. Worth it.`
+  },
+  {
+    date: "2026-05-03",
+    content: `One year since the message that started all this. One year since I had no idea that a stranger on my screen would become the person I think about before I fall asleep and the moment I open my eyes.
+
+Long distance is hard. Nobody warns you how hard, or how ordinary the hard parts are — missed calls, bad signal, falling asleep mid-sentence.
+
+But nobody warns you how good the good parts are either. So tonight, I'm only thinking about those.`
+  }
+];
+
+/* ============================================================
+   App logic
+   ============================================================ */
+
+const DOW = ["Sunday","Monday","Tuesday","Wednesday","Thursday","Friday","Saturday"];
+const MONTHS = ["January","February","March","April","May","June","July","August","September","October","November","December"];
+
+function formatDate(iso){
+  const [y,m,d] = iso.split("-").map(Number);
+  const dt = new Date(y, m-1, d);
+  return {
+    label: `${d} ${MONTHS[m-1]} ${y}`,
+    dow: DOW[dt.getDay()]
+  };
+}
+
+// sort newest first
+const sorted = [...ENTRIES].sort((a,b)=> b.date.localeCompare(a.date));
+
+// Build "pages" content array: index 0 = front cover-inside (intro), then entries, then back endpaper
+const pagesContent = [];
+pagesContent.push({ type:"intro" });
+sorted.forEach(e => pagesContent.push({ type:"entry", ...e }));
+pagesContent.push({ type:"end" });
+
+// total leaves needed: each leaf has 2 faces (front,back) showing 2 page contents.
+// We render as a flat sequence of "page contents", paired into leaves: [0,1],[2,3],...
+function buildLeavesData(){
+  const leaves = [];
+  for(let i=0; i<pagesContent.length; i+=2){
+    leaves.push([pagesContent[i], pagesContent[i+1] || {type:"blank"}]);
+  }
+  return leaves;
+}
+const leavesData = buildLeavesData();
+
+function renderPageHTML(content, pageNumber){
+  if(content.type === "intro"){
+    return `<div class="endpaper"><div class="endpaper-inner">In here are the small, ordinary moments<br>I wanted to keep —<br>all of them about you.</div></div>`;
+  }
+  if(content.type === "end"){
+    return `<div class="endpaper"><div class="endpaper-inner">— more to come —</div></div>`;
+  }
+  if(content.type === "blank"){
+    return `<div class="endpaper"></div>`;
+  }
+  const {label, dow} = formatDate(content.date);
+  const safe = content.content
+    .replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;");
+  return `
+    <div class="page-content">
+      <div class="page-date"><span>${label}</span><span class="dow">${dow}</span></div>
+      <div class="page-body">${safe}</div>
+      <div class="heart-dingbat">❀</div>
+      <div class="page-num">${pageNumber}</div>
+    </div>`;
+}
+
+const leavesRoot = document.getElementById("leavesRoot");
+const bookEl = document.getElementById("book");
+const stage = document.getElementById("stage");
+const coverEl = document.getElementById("cover");
+const controls = document.getElementById("controls");
+const topLabel = document.getElementById("topLabel");
+const closeBtn = document.getElementById("closeBtn");
+const prevBtn = document.getElementById("prevBtn");
+const nextBtn = document.getElementById("nextBtn");
+const pageInfo = document.getElementById("pageInfo");
+
+let isMobile = window.innerWidth < 880;
+let currentLeaf = 0; // index of the leftmost un-flipped leaf (next to flip forward)
+let animating = false;
+let opened = false;
+
+const leafEls = [];
+
+function buildLeaves(){
+  leavesRoot.innerHTML = "";
+  leafEls.length = 0;
+  leavesData.forEach((pair, idx) => {
+    const leaf = document.createElement("div");
+    leaf.className = "leaf right";
+    leaf.style.zIndex = leavesData.length - idx;
+    leaf.dataset.index = idx;
+
+    const front = document.createElement("div");
+    front.className = "face front";
+    front.innerHTML = renderPageHTML(pair[0], idx*2 + 1) ;
+
+    const back = document.createElement("div");
+    back.className = "face back";
+    back.innerHTML = renderPageHTML(pair[1], idx*2 + 2);
+
+    const curl = document.createElement("div");
+    curl.className = "curl-shadow";
+
+    leaf.appendChild(front);
+    leaf.appendChild(back);
+    leaf.appendChild(curl);
+    leavesRoot.appendChild(leaf);
+    leafEls.push(leaf);
+  });
+  updateLeafStack();
+}
+
+function updateLeafStack(){
+  leafEls.forEach((leaf, idx) => {
+    if(idx < currentLeaf){
+      leaf.style.transform = "rotateY(-180deg)";
+      leaf.style.zIndex = idx + 1;
+    } else {
+      leaf.style.transform = "rotateY(0deg)";
+      leaf.style.zIndex = leafEls.length - idx;
+    }
+  });
+}
+
+function setSizes(){
+  isMobile = window.innerWidth < 900 || window.innerHeight < window.innerWidth;
+  const vw = window.innerWidth, vh = window.innerHeight;
+  let pageW, pageH;
+  if(isMobile){
+    pageH = Math.min(vh * 0.74, 640);
+    pageW = Math.min(vw * 0.86, pageH * 0.66);
+    pageH = pageW / 0.66;
+    if(pageH > vh*0.74){ pageH = vh*0.74; pageW = pageH*0.66; }
+  } else {
+    pageH = Math.min(vh * 0.78, 700);
+    pageW = pageH * 0.68;
+    if(pageW * 2 > vw * 0.82){
+      pageW = (vw*0.82)/2;
+      pageH = pageW / 0.68;
+    }
+  }
+  document.documentElement.style.setProperty('--page-w', pageW+"px");
+  document.documentElement.style.setProperty('--page-h', pageH+"px");
+  document.documentElement.style.setProperty('--book-w', isMobile ? pageW+"px" : (pageW*2)+"px");
+
+  bookEl.classList.toggle("single-mode", isMobile);
+  leafEls.forEach(leaf=>{
+    leaf.classList.toggle("right", !isMobile);
+    leaf.classList.toggle("left-static", false);
+  });
+  positionStage();
+}
+
+function positionStage(){
+  // center book; when single mode, fine. When double, also fine since book is centered.
+}
+
+function totalLeaves(){ return leafEls.length; }
+
+function goNext(){
+  if(animating || currentLeaf >= totalLeaves()) return;
+  animating = true;
+  const leaf = leafEls[currentLeaf];
+  leaf.classList.add("flipping");
+  leaf.style.zIndex = totalLeaves() + 5;
+  requestAnimationFrame(()=>{
+    leaf.style.transform = "rotateY(-180deg)";
+  });
+  setTimeout(()=>{
+    leaf.classList.remove("flipping");
+    currentLeaf++;
+    updateLeafStack();
+    animating = false;
+    updateUI();
+  }, 860);
+}
+
+function goPrev(){
+  if(animating || currentLeaf <= 0) return;
+  animating = true;
+  currentLeaf--;
+  const leaf = leafEls[currentLeaf];
+  leaf.classList.add("flipping");
+  leaf.style.transform = "rotateY(-180deg)";
+  leaf.style.zIndex = totalLeaves() + 5;
+  requestAnimationFrame(()=>{
+    leaf.style.transform = "rotateY(0deg)";
+  });
+  setTimeout(()=>{
+    leaf.classList.remove("flipping");
+    updateLeafStack();
+    animating = false;
+    updateUI();
+  }, 860);
+}
+
+function currentPageRange(){
+  // returns human readable "page x of y"
+  if(isMobile){
+    const pageIdx = currentLeaf*2; // showing front of currentLeaf (right-facing) i.e next page
+    const shown = Math.min(pageIdx+1, pagesContent.length);
+    return `${shown} / ${pagesContent.length}`;
+  } else {
+    const left = currentLeaf*2; // page shown on left = back of previous leaf, or cover
+    const rightPage = Math.min(currentLeaf*2 + 1, pagesContent.length);
+    const leftPage = currentLeaf*2;
+    if(leftPage <= 0){
+      return `${rightPage} / ${pagesContent.length}`;
+    }
+    return `${leftPage} – ${rightPage} / ${pagesContent.length}`;
+  }
+}
+
+function updateUI(){
+  prevBtn.disabled = currentLeaf <= 0;
+  nextBtn.disabled = currentLeaf >= totalLeaves();
+  pageInfo.textContent = currentPageRange();
+}
+
+/* open book */
+function openBook(){
+  if(opened) return;
+  opened = true;
+  coverEl.classList.add("open");
+  controls.classList.add("show");
+  topLabel.classList.add("show");
+  closeBtn.classList.add("show");
+  updateUI();
+}
+function closeBook(){
+  if(!opened) return;
+  // flip all leaves back first
+  currentLeaf = 0;
+  updateLeafStack();
+  opened = false;
+  coverEl.classList.remove("open");
+  controls.classList.remove("show");
+  topLabel.classList.remove("show");
+  closeBtn.classList.remove("show");
+}
+
+coverEl.addEventListener("click", openBook);
+closeBtn.addEventListener("click", closeBook);
+nextBtn.addEventListener("click", goNext);
+prevBtn.addEventListener("click", goPrev);
+
+document.addEventListener("keydown", (e)=>{
+  if(!opened) return;
+  if(e.key === "ArrowRight") goNext();
+  if(e.key === "ArrowLeft") goPrev();
+});
+
+/* swipe support */
+let touchStartX = null, touchStartY = null;
+stage.addEventListener("touchstart", (e)=>{
+  if(!opened) return;
+  touchStartX = e.touches[0].clientX;
+  touchStartY = e.touches[0].clientY;
+}, {passive:true});
+stage.addEventListener("touchend", (e)=>{
+  if(!opened || touchStartX === null) return;
+  const dx = e.changedTouches[0].clientX - touchStartX;
+  const dy = e.changedTouches[0].clientY - touchStartY;
+  if(Math.abs(dx) > 50 && Math.abs(dx) > Math.abs(dy)){
+    if(dx < 0) goNext(); else goPrev();
+  }
+  touchStartX = null; touchStartY = null;
+}, {passive:true});
+
+window.addEventListener("resize", setSizes);
+
+buildLeaves();
+setSizes();
+updateUI();
+</script>
+</body>
+</html>
